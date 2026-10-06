@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Проверка правописания и пунктуации</title>
+<style>
+*{box-sizing:border-box;font-family:'Segoe UI',Roboto,system-ui,sans-serif}
+body{background:linear-gradient(145deg,#f0f4fa,#dfe7f3);min-height:100vh;margin:0;padding:20px;display:flex;justify-content:center;align-items:flex-start}
+.card{background:#fff;border-radius:28px;padding:32px 36px;max-width:820px;width:100%;box-shadow:0 20px 40px rgba(0,20,40,.15)}
+h1{font-size:2rem;color:#1e3c72;text-align:center;margin:0 0 8px}
+.sub{text-align:center;color:#5c7290;margin-bottom:24px;padding-bottom:14px;border-bottom:1px dashed #b7c9e0;font-size:.95rem}
+textarea{width:100%;min-height:120px;padding:16px 18px;font-size:1.1rem;border:2px solid #dce5f0;border-radius:16px;resize:vertical;font-family:'Segoe UI',sans-serif;outline:none;background:#fbfdff;color:#1e2f44;line-height:1.5}
+textarea:focus{border-color:#3b6cb0;background:#fff;box-shadow:0 0 0 4px rgba(59,108,176,.1)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 20px}
+.btn{flex:1;min-width:150px;padding:14px 24px;font-size:1.05rem;font-weight:600;border:none;border-radius:50px;cursor:pointer;border:1px solid #d0ddeb;color:#1e3c72;background:#fff}
+.btn.primary{background:#1e3c72;color:#fff;border-color:#2a4f8a}
+.btn.primary:hover{background:#2a4f8a;transform:translateY(-2px)}
+.btn:hover{background:#f0f5ff;transform:translateY(-2px)}
+.accuracy{background:linear-gradient(135deg,#1e3c72,#2a5298);border-radius:20px;padding:22px;color:#fff;text-align:center;margin-bottom:20px;display:none}
+.accuracy.show{display:block}
+.accuracy .num{font-size:3rem;font-weight:700;font-family:'Courier New',monospace;line-height:1}
+.accuracy .label{font-size:.95rem;opacity:.9;margin-top:8px;letter-spacing:.5px}
+.accuracy .sub-label{font-size:.82rem;opacity:.75;margin-top:4px}
+.accuracy.ok{background:linear-gradient(135deg,#1a7f37,#2ea44f)}
+.accuracy.mid{background:linear-gradient(135deg,#c47b00,#e8a020)}
+.accuracy.bad{background:linear-gradient(135deg,#a01020,#d02a3a)}
+.analysis{display:flex;flex-direction:column;gap:12px}
+.word-block{background:#f5f8ff;border:2px solid #d3e1f5;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.word-block.punct-block{background:#fff8f0;border-color:#f0d9b8}
+.word-title{font-size:1.15rem;font-weight:700;color:#1e3c72;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status{font-size:.8rem;font-weight:700;padding:3px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px}
+.status.ok{background:#d4f0dd;color:#116b2c}
+.status.err{background:#ffe0e0;color:#b22234}
+.status.warn{background:#fff3cd;color:#8a5b00}
+.word-line{font-family:'Courier New',monospace;font-size:1.15rem;display:flex;flex-wrap:wrap;gap:2px;line-height:1.6}
+.ltr{display:inline-block;padding:2px 4px;border-radius:4px}
+.ltr.bad{background:#ffd5d5;color:#b22234;font-weight:700}
+.ltr.miss{background:#ffe9b0;color:#8a5b00;font-weight:700}
+.ltr.extra{background:#ffd5d5;color:#b22234;font-weight:700;text-decoration:line-through}
+.correction{background:#fff;border-radius:12px;padding:12px 16px;font-size:1rem;line-height:1.6;color:#1e2f44;border-left:4px solid #2ea44f}
+.correction .arrow{color:#2ea44f;font-weight:700;font-size:1.2rem}
+.correction .fixed{color:#116b2c;font-weight:700;font-family:'Courier New',monospace}
+.explain{font-size:.92rem;color:#5c7290;background:#eef4fc;padding:10px 14px;border-radius:10px;line-height:1.5}
+.explain b{color:#1e3c72}
+.explain.rule{background:#fff8e6;border-left:3px solid #e8a020}
+.explain.punct{background:#f0f8ff;border-left:3px solid #3b6cb0}
+.suggestions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.92rem;color:#5c7290}
+.suggestions .chip{background:#e2eaf5;color:#1e3c72;font-weight:600;padding:5px 14px;border-radius:20px;cursor:pointer;border:1px solid #c2d2e8;font-family:'Courier New',monospace}
+.suggestions .chip:hover{background:#c7daf0}
+.suggestions .chip.best{background:#d4f0dd;border-color:#2ea44f;color:#116b2c}
+.empty{text-align:center;color:#8ba0b8;padding:30px 10px;font-size:1rem;line-height:1.6}
+.empty .big{font-size:2.5rem;display:block;margin-bottom:10px}
+.footer{text-align:center;margin-top:22px;font-size:.78rem;color:#8ba0b8}
+.stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:.85rem}
+.stats span{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px}
+@media (max-width:560px){.card{padding:22px 18px}h1{font-size:1.6rem}.accuracy .num{font-size:2.2rem}}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📝 Проверка правописания и пунктуации</h1>
+  <div class="sub">введите слово или предложение — проверим орфографию, пунктуацию и объясним ошибки</div>
+
+  <textarea id="input" placeholder="Например: сабака, малоко, привет мир...">сабака малоко привет мир как дела</textarea>
+
+  <div class="actions">
+    <button class="btn primary" id="checkBtn">🔍 Проверить</button>
+    <button class="btn" id="clearBtn">🧹 Очистить</button>
+  </div>
+
+  <div class="accuracy" id="accuracy">
+    <div class="num" id="accNum">—</div>
+    <div class="label" id="accLabel">точность</div>
+    <div class="sub-label" id="accSub"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="analysis" id="analysis">
+    <div class="empty"><span class="big">📖</span>Введите текст и нажмите «Проверить»</div>
+  </div>
+
+  <div class="footer">встроенный словарь русских слов • алгоритм Левенштейна • проверка пунктуации</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===== РАСШИРЕННЫЙ СЛОВАРЬ РУССКИХ СЛОВ =====
+  var DICT = [
+    // Люди и родственники
+    "человек","мужчина","женщина","мальчик","девочка","ребёнок","дети","мама","папа","бабушка","дедушка",
+    "брат","сестра","сын","дочь","дядя","тётя","друг","подруга","семья","родители","внук","внучка",
+    "привет","здравствуйте","здравствуй","пока","спасибо","пожалуйста","извините","простите",
+    // Дом и интерьер
+    "дом","квартира","комната","кухня","спальня","ванная","туалет","коридор","балкон","дверь","окно",
+    "стол","стул","кровать","диван","шкаф","полка","лампа","люстра","ковёр","зеркало","картина",
+    // Еда и напитки
+    "хлеб","молоко","вода","чай","кофе","сок","суп","борщ","каша","мясо","рыба","курица","сыр",
+    "масло","яйцо","яйца","сахар","соль","перец","картофель","картошка","морковь","лук","капуста",
+    "помидор","огурец","яблоко","груша","банан","апельсин","лимон","виноград","ягода","арбуз","дыня",
+    "пирог","торт","печенье","конфета","шоколад","мороженое","йогурт","кетчуп","майонез",
+    // Природа
+    "солнце","луна","звезда","небо","облако","дождь","снег","ветер","гроза","молния","радуга",
+    "море","океан","река","озеро","пруд","ручей","гора","холм","лес","дерево","куст","трава",
+    "цветок","лист","корень","земля","песок","камень","глина","огонь","воздух",
+    // Животные
+    "кошка","кот","собака","пёс","щенок","котёнок","мышь","крыса","птица","ворона","воробей",
+    "голубь","синица","снегирь","орёл","сокол","сова","петух","цыплёнок","утка","гусь",
+    "корова","бык","телёнок","лошадь","конь","жеребёнок","свинья","поросёнок","овца","баран",
+    "коза","козёл","тигр","лев","волк","лиса","медведь","заяц","белка","ёжик","олень","лось",
+    "слон","жираф","зебра","обезьяна","крокодил","змея","черепаха","лягушка","акула",
+    "кит","дельфин","бабочка","пчела","муха","комар","муравей","паук","жук",
+    // Школа
+    "школа","класс","урок","учитель","учительница","ученик","ученица","книга","учебник","тетрадь",
+    "ручка","карандаш","линейка","ластик","доска","мел","парта","портфель","рюкзак","оценка",
+    "двойка","тройка","четвёрка","пятёрка","экзамен","задача","пример","задание",
+    "математика","литература","история","география","биология","физика","химия",
+    "английский","физкультура","рисование","музыка",
+    // Профессии
+    "работа","врач","доктор","инженер","программист","строитель","водитель","продавец",
+    "повар","официант","парикмахер","полицейский","пожарный","военный","лётчик","космонавт",
+    "учёный","художник","писатель","поэт","актёр","певец","музыкант","спортсмен",
+    // Транспорт
+    "машина","автомобиль","автобус","троллейбус","трамвай","поезд","электричка","метро","самолёт",
+    "вертолёт","корабль","лодка","велосипед","мотоцикл","самокат","такси","грузовик",
+    // Город
+    "город","деревня","село","улица","проспект","площадь","парк","сквер","магазин","рынок",
+    "аптека","больница","поликлиника","библиотека","музей","театр","кино","цирк","стадион","бассейн",
+    "садик","университет","институт","вокзал","аэропорт","порт","мост","фонтан",
+    // Время
+    "время","час","минута","секунда","день","ночь","утро","вечер","полдень","полночь","неделя",
+    "месяц","год","век","весна","лето","осень","зима","понедельник","вторник","среда","четверг",
+    "пятница","суббота","воскресенье","январь","февраль","март","апрель","май","июнь","июль",
+    "август","сентябрь","октябрь","ноябрь","декабрь",
+    // Прилагательные
+    "хороший","плохой","большой","маленький","высокий","низкий","длинный","короткий","широкий",
+    "узкий","толстый","тонкий","новый","старый","молодой","красивый","умный","глупый",
+    "весёлый","грустный","добрый","злой","сильный","слабый","быстрый","медленный","горячий",
+    "холодный","светлый","тёмный","чистый","грязный","сладкий","горький","кислый","солёный",
+    "белый","чёрный","красный","синий","зелёный","жёлтый","серый","розовый","коричневый","фиолетовый",
+    "оранжевый","голубой",
+    // Глаголы
+    "быть","иметь","делать","говорить","сказать","знать","думать","видеть","смотреть","слушать",
+    "слышать","идти","ходить","ехать","бежать","лететь","плыть","сидеть","стоять","лежать",
+    "работать","учиться","играть","читать","писать","рисовать","петь","танцевать","готовить",
+    "есть","пить","спать","просыпаться","вставать","ложиться","умываться","одеваться","любить",
+    "нравиться","хотеть","мочь","уметь","помогать","давать","брать","покупать","продавать",
+    "открывать","закрывать","начинать","заканчивать",
+    // Числа
+    "ноль","один","два","три","четыре","пять","шесть","семь","восемь","девять","десять",
+    "одиннадцать","двенадцать","тринадцать","четырнадцать","пятнадцать","шестнадцать",
+    "семнадцать","восемнадцать","девятнадцать","двадцать","тридцать","сорок","пятьдесят",
+    "шестьдесят","семьдесят","восемьдесят","девяносто","сто","тысяча","миллион",
+    "первый","второй","третий","четвёртый","пятый","десятый","сотый",
+    // Абстрактные
+    "мир","жизнь","смерть","любовь","счастье","радость","печаль","страх","надежда","вера",
+    "правда","ложь","добро","зло","красота","сила","слабость","здоровье","болезнь","удача",
+    "проблема","вопрос","ответ","слово","буква","звук","язык","речь","мысль","идея","мечта",
+    "цель","смысл","знание","ум","память","внимание","воображение",
+    // Предлоги и союзы
+    "и","а","но","да","нет","не","ни","или","если","чтобы","что","как","где","когда","почему",
+    "зачем","кто","чей","этот","тот","такой","весь","всё","каждый","любой","другой","сам","самый",
+    // Местоимения
+    "я","ты","он","она","оно","мы","вы","они","меня","тебя","его","её","нас","вас","их","мой",
+    "твой","свой","наш","ваш","это","эта","эти",
+    // Предлоги
+    "в","на","с","к","по","от","до","из","у","о","об","за","под","над","при","про","для","без",
+    "через","между","около","возле","вокруг","впереди","сзади","сверху","снизу","слева","справа",
+    // Наречия
+    "здесь","там","тут","сейчас","потом","раньше","позже","всегда","никогда","часто","редко",
+    "иногда","опять","снова","уже","ещё","только","очень","слишком","совсем","почти","вместе",
+    "быстро","медленно","хорошо","плохо","правильно","неправильно","верно","неверно",
+    // Приветствия и вежливость
+    "да","нет","конечно","возможно","наверное","обязательно","всегда",
+    // Дополнительные
+    "сегодня","вчера","завтра","сейчас","потом","рано","поздно","утром","днём","вечером","ночью",
+    "друг","подруга","товарищ","коллега","сосед","соседка","гость","хозяин","хозяйка",
+    "муж","жена","сын","дочь","отец","мать","родители","дети","ребёнок","малыш","кроха",
+    "радость","смех","улыбка","слёзы","грусть","тоска","скука","интерес","веселье",
+    "внимание","забота","нежность","ласка","тепло","холод","свет","тьма","шум","тишина",
+    "порядок","беспорядок","чистота","грязь","красота","уродство","богатство","бедность",
+    "здоровье","болезнь","лекарство","таблетка","врач","больница","аптека",
+    "спорт","футбол","хоккей","теннис","плавание","бег","прыжки","борьба","бокс",
+    "искусство","музыка","живопись","литература","поэзия","театр","кино","фотография",
+    "наука","техника","компьютер","телефон","интернет","программа","сайт","почта",
+    "деньги","рубль","доллар","евро","цена","стоимость","скидка","распродажа",
+    "погода","температура","градус","мороз","жара","ветер","дождь","снег","солнце",
+    "одежда","рубашка","брюки","платье","юбка","куртка","пальто","шапка","шарф","перчатки",
+    "обувь","ботинки","сапоги","кроссовки","туфли","тапки",
+    "мебель","стол","стул","кресло","диван","кровать","шкаф","полка","тумба",
+    "посуда","тарелка","чашка","ложка","вилка","нож","кастрюля","сковорода","чайник"
+  ];
+
+  var DICT_SET = {};
+  for (var i = 0; i < DICT.length; i++) DICT_SET[DICT[i].toLowerCase()] = true;
+
+  // ===== Расстояние Левенштейна =====
+  function levenshtein(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    var m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    var prev = [], curr = [];
+    for (var j = 0; j <= n; j++) prev[j] = j;
+    for (var i = 1; i <= m; i++) {
+      curr[0] = i;
+      for (var j2 = 1; j2 <= n; j2++) {
+        var cost = a[i-1] === b[j2-1] ? 0 : 1;
+        curr[j2] = Math.min(prev[j2]+1, curr[j2-1]+1, prev[j2-1]+cost);
+      }
+      prev = curr.slice();
+    }
+    return prev[n];
+  }
+
+  // ===== Поиск похожих слов с учётом частотности =====
+  function findSuggestions(word) {
+    word = word.toLowerCase();
+    var results = [];
+    for (var i = 0; i < DICT.length; i++) {
+      var w = DICT[i].toLowerCase();
+      var d = levenshtein(word, w);
+      var maxDist = word.length <= 3 ? 1 : word.length <= 5 ? 1 : word.length <= 8 ? 2 : 3;
+      if (d > 0 && d <= maxDist) {
+        // Приоритет словам с такой же первой буквой и похожей длиной
+        var score = d;
+        if (w[0] === word[0]) score -= 0.3;
+        if (Math.abs(w.length - word.length) <= 1) score -= 0.2;
+        results.push({ word: DICT[i], dist: d, score: score });
+      }
+    }
+    results.sort(function(a, b) { return a.score - b.score; });
+    return results.slice(0, 5);
+  }
+
+  // ===== Детальное объяснение ошибок =====
+  function explainError(input, correct) {
+    var inp = input.toLowerCase();
+    var cor = correct.toLowerCase();
+    var out = [];
+
+    // Находим минимальное выравнивание через DP
+    var align = alignWords(inp, cor);
+    
+    // Анализируем операции
+    var subs = [], dels = [], ins = [];
+    for (var i = 0; i < align.length; i++) {
+      var op = align[i];
+      if (op.type === 'sub') subs.push(op);
+      else if (op.type === 'del') dels.push(op);
+      else if (op.type === 'ins') ins.push(op);
+    }
+
+    if (subs.length === 1 && dels.length === 0 && ins.length === 0) {
+      out.push('🔤 Буква «' + subs[0].from + '» заменена на «' + subs[0].to + '» (позиция ' + (subs[0].pos+1) + ').');
+    } else if (subs.length > 1) {
+      out.push('🔤 Замены: ' + subs.map(function(s) {
+        return '«' + s.from + '» → «' + s.to + '» (поз. ' + (s.pos+1) + ')';
+      }).join('; ') + '.');
+    }
+
+    if (dels.length === 1 && subs.length === 0) {
+      out.push('➖ Лишняя буква «' + dels[0].ch + '» на позиции ' + (dels[0].pos+1) + '.');
+    } else if (dels.length > 1) {
+      out.push('➖ Лишние буквы: ' + dels.map(function(d) {
+        return '«' + d.ch + '» (поз. ' + (d.pos+1) + ')';
+      }).join(', ') + '.');
+    }
+
+    if (ins.length === 1 && subs.length === 0) {
+      out.push('➕ Пропущена буква «' + ins[0].ch + '» на позиции ' + (ins[0].pos+1) + '.');
+    } else if (ins.length > 1) {
+      out.push('➕ Пропущены буквы: ' + ins.map(function(m) {
+        return '«' + m.ch + '» (поз. ' + (m.pos+1) + ')';
+      }).join(', ') + '.');
+    }
+
+    // Комбинированные ошибки
+    if ((subs.length > 0 && (dels.length > 0 || ins.length > 0)) || (dels.length > 0 && ins.length > 0)) {
+      out.push('🔀 Обнаружены комбинированные ошибки: замена, пропуск и/или лишние буквы.');
+    }
+
+    // Правила орфографии
+    var rules = [];
+    if (/жы|шы/.test(inp) && /жи|ши/.test(cor))
+      rules.push('📌 Правило: ЖИ и ШИ пишутся с буквой И.');
+    if (/чя|щя/.test(inp) && /ча|ща/.test(cor))
+      rules.push('📌 Правило: ЧА и ЩА пишутся с буквой А.');
+    if (/чю|щю/.test(inp) && /чу|щу/.test(cor))
+      rules.push('📌 Правило: ЧУ и ЩУ пишутся с буквой У.');
+    if (/жи|ши/.test(inp) && /жы|шы/.test(cor))
+      rules.push('📌 Правило: ЖИ и ШИ пишутся с буквой И (не Ы).');
+    if (/ча|ща/.test(inp) && /чя|щя/.test(cor))
+      rules.push('📌 Правило: ЧА и ЩА пишутся с буквой А (не Я).');
+    if (/чу|щу/.test(inp) && /чю|щю/.test(cor))
+      rules.push('📌 Правило: ЧУ и ЩУ пишутся с буквой У (не Ю).');
+    if (inp.indexOf('ь') === -1 && cor.indexOf('ь') !== -1)
+      rules.push('📌 Пропущен мягкий знак (ь).');
+    if (inp.indexOf('ь') !== -1 && cor.indexOf('ь') === -1)
+      rules.push('📌 Лишний мягкий знак (ь).');
+    
+    // Безударные гласные
+    if (/[аоэиуыеёюя]/.test(inp) && /[аоэиуыеёюя]/.test(cor)) {
+      var vowelsInp = inp.match(/[аоэиуыеёюя]/g) || [];
+      var vowelsCor = cor.match(/[аоэиуыеёюя]/g) || [];
+      if (vowelsInp.length === vowelsCor.length && subs.length > 0) {
+        for (var s = 0; s < subs.length; s++) {
+          if (/[аоэиуыеёюя]/.test(subs[s].from) && /[аоэиуыеёюя]/.test(subs[s].to)) {
+            rules.push('📌 Проверьте безударную гласную: «' + subs[s].from + '» → «' + subs[s].to + '».');
+            break;
+          }
+        }
+      }
+    }
+
+    // Парные согласные
+    if (subs.length === 1 && /[бвгджзклмнпрстфхцчшщ]/.test(subs[0].from) && /[бвгджзклмнпрстфхцчшщ]/.test(subs[0].to)) {
+      rules.push('📌 Проверьте парную согласную: подберите проверочное слово.');
+    }
+
+    // Словарные слова
+    var dictWords = ['собака','корова','молоко','ворона','сорока','хорошо','деревня','здоровье','лестница','праздник','здравствуйте','пожалуйста','спасибо','сегодня','вчера','завтра'];
+    for (var dw = 0; dw < dictWords.length; dw++) {
+      if (cor === dictWords[dw]) {
+        rules.push('📌 Словарное слово: «' + cor + '» нужно запомнить.');
+        break;
+      }
+    }
+
+    out = out.concat(rules);
+    return out;
+  }
+
+  // ===== Выравнивание слов (DP) =====
+  function alignWords(a, b) {
+    var m = a.length, n = b.length;
+    var dp = [];
+    for (var i = 0; i <= m; i++) {
+      dp[i] = [];
+      for (var j = 0; j <= n; j++) {
+        if (i === 0) dp[i][j] = j;
+        else if (j === 0) dp[i][j] = i;
+        else {
+          var cost = a[i-1] === b[j-1] ? 0 : 1;
+          dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+        }
+      }
+    }
+    
+    // Обратный проход для восстановления операций
+    var ops = [];
+    var i = m, j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && a[i-1] === b[j-1]) {
+        ops.push({ type: 'match', ch: a[i-1], pos: i-1 });
+        i--; j--;
+      } else if (i > 0 && j > 0 && dp[i][j] === dp[i-1][j-1] + 1) {
+        ops.push({ type: 'sub', from: a[i-1], to: b[j-1], pos: i-1 });
+        i--; j--;
+      } else if (i > 0 && dp[i][j] === dp[i-1][j] + 1) {
+        ops.push({ type: 'del', ch: a[i-1], pos: i-1 });
+        i--;
+      } else {
+        ops.push({ type: 'ins', ch: b[j-1], pos: i });
+        j--;
+      }
+    }
+    return ops.reverse();
+  }
+
+  // ===== Разбор текста на слова и знаки =====
+  function tokenize(text) {
+    var tokens = [];
+    var re = /[А-Яа-яЁёA-Za-z]+(-[А-Яа-яЁёA-Za-z]+)*|[.,!?;:—–-]+|\s+/g;
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      var t = m[0];
+      if (/^[А-Яа-яЁёA-Za-z]/.test(t)) tokens.push({ type: 'word', text: t });
+      else if (/^[.,!?;:—–-]+$/.test(t)) tokens.push({ type: 'punct', text: t });
+      else tokens.push({ type: 'space', text: t });
+    }
+    return tokens;
+  }
+
+  // ===== Проверка пунктуации =====
+  function checkPunctuation(tokens, fullText) {
+    var issues = [];
+    
+    // Собираем слова и позиции
+    var words = [];
+    for (var i = 0; i < tokens.length; i++) {
+      if (tokens[i].type === 'word') {
+        words.push({ word: tokens[i].text, tokenIndex: i });
+      }
+    }
+
+    if (words.length < 2) return issues;
+
+    // Проверяем наличие запятой перед союзами а, но, однако, зато
+    var conjunctions = ['а','но','однако','зато','или','либо'];
+    for (var w = 1; w < words.length; w++) {
+      var lower = words[w].word.toLowerCase();
+      if (conjunctions.indexOf(lower) !== -1) {
+        // Ищем запятую перед этим словом
+        var hasComma = false;
+        var tokenIdx = words[w].tokenIndex;
+        for (var k = tokenIdx - 1; k >= 0; k--) {
+          if (tokens[k].type === 'punct' && tokens[k].text.indexOf(',') !== -1) {
+            hasComma = true;
+            break;
+          }
+          if (tokens[k].type === 'word') break;
+        }
+        if (!hasComma) {
+          issues.push({
+            type: 'missing',
+            position: w,
+            before: words[w-1].word,
+            word: words[w].word,
+            message: 'Перед союзом «' + words[w].word + '» нуж
